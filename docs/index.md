@@ -4,7 +4,7 @@ layout: default
 
 Text can be **bold**, _italic_, or ~~strikethrough~~.
 
-[How to evaluate the performance of python](evaluation-python.md).
+[How to evaluate the performance of python](evaluate-python.md).
 
 There should be whitespace between paragraphs.
 
