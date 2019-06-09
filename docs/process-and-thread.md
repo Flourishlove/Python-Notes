@@ -104,7 +104,7 @@ def main():
 if __name__ == '__main__':
     main()
 ```
-> 这段代码的结果是直接使用threading模块中的Thread类新建对象实现的，也可以通过继承Thread类的方式来创建自定义的线程类，然后再创建线程对象并启动线程。
+这段代码的结果是直接使用threading模块中的Thread类新建对象实现的，也可以通过继承Thread类的方式来创建自定义的线程类，然后再创建线程对象并启动线程。
 
 ```python
 from random import randint
@@ -240,8 +240,111 @@ if __name__ == "__main__":
     with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
         executor.map(thread_function, range(3))
 ```
-可以看到，通过使用线程池，我们不再需要通过给每个线程添加```join```方法来阻塞程序。这样可以防止忘记添加```join```
+可以看到，通过使用线程池，我们不再需要通过给每个线程添加```join```方法来阻塞程序，这样可以防止忘记添加```join```。
 
-[Python-100-Days](https://github.com/jackfrued/Python-100-Days/blob/master/Day01-15/13.%E8%BF%9B%E7%A8%8B%E5%92%8C%E7%BA%BF%E7%A8%8B.md)
-[ThreadPoolExecutor线程池](https://www.jianshu.com/p/b9b3d66aa0be)
+#### 多线程使用锁
+```python
+from time import sleep
+from threading import Thread, Lock
+
+class Account(object):
+
+    def __init__(self):
+        self._balance = 0
+        self._lock = Lock()
+
+    def deposit(self, money):
+        # 先获取锁才能执行后续的代码
+        self._lock.acquire()
+        try:
+            new_balance = self._balance + money
+            sleep(0.01)
+            self._balance = new_balance
+        finally:
+            # 在finally中执行释放锁的操作保证正常异常锁都能释放
+            self._lock.release()
+
+    @property
+    def balance(self):
+        return self._balance
+
+class AddMoneyThread(Thread):
+    def __init__(self, account, money):
+        super().__init__()
+        self._account = account
+        self._money = money
+
+    def run(self):
+        self._account.deposit(self._money)
+
+def main():
+    account = Account()
+    threads = []
+    for _ in range(100):
+        t = AddMoneyThread(account, 1)
+        threads.append(t)
+        t.start()
+    for t in threads:
+        t.join()
+    print('账户余额为: ￥%d元' % account.balance)
+
+if __name__ == '__main__':
+    main()
+```
+
+#### 使用进程分解大任务，并且用queue实现通信
+```python
+rom multiprocessing import Process, Queue
+from random import randint
+from time import time
+
+
+def task_handler(curr_list, result_queue):
+    total = 0
+    for number in curr_list:
+        total += number
+    result_queue.put(total)
+
+
+def main():
+    processes = []
+    number_list = [x for x in range(1, 100000001)]
+    result_queue = Queue()
+    index = 0
+    # 启动8个进程将数据切片后进行运算
+    for _ in range(8):
+        p = Process(target=task_handler,
+                    args=(number_list[index:index + 12500000], result_queue))
+        index += 12500000
+        processes.append(p)
+        p.start()
+    # 开始记录所有进程执行完成花费的时间
+    start = time()
+    for p in processes:
+        p.join()
+    # 合并执行结果
+    total = 0
+    while not result_queue.empty():
+        total += result_queue.get()
+    print(total)
+    end = time()
+    print('Execution time: ', (end - start), 's', sep='')
+
+
+if __name__ == '__main__':
+    main()
+```
+
+
+## Java中的多进程与多线程
+### Java中实现多线程的方式
+#### 1. 继承Thread类
+
+#### 2. 实现runnable接口
+
+
+
+### 参考网站
+[Python-100-Days](https://github.com/jackfrued/Python-100-Days/blob/master/Day01-15/13.%E8%BF%9B%E7%A8%8B%E5%92%8C%E7%BA%BF%E7%A8%8B.md)  
+[ThreadPoolExecutor线程池](https://www.jianshu.com/p/b9b3d66aa0be)  
 [An Intro to Threading in Python](https://realpython.com/intro-to-python-threading/#using-a-threadpoolexecutor)
